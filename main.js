@@ -52,7 +52,8 @@ THREE.PointerLockControls = function (camera) {
 
 
 var ticks = 0,
-	fps = 60;
+	fps = 60,
+	fov = 80;
 
 var ctx,
 	audio,
@@ -99,9 +100,10 @@ document.body.appendChild(renderer.domElement);
 var scene = new THREE.Scene();
 scene.background = new THREE.Color(0, 0, 0);
 
-var camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.001, 1000);
+var camera = new THREE.PerspectiveCamera(fov, window.innerWidth/window.innerHeight, 0.001, 1000);
 var controls = new THREE.PointerLockControls(camera);
-controls.getObject().translateZ(2);
+controls.getObject().translateZ(maxZ/2);
+controls.getObject().rotateZ(Math.PI/2);
 
 scene.add(controls.getObject());
 
@@ -131,9 +133,6 @@ for ( var i=0 ; i<nCubesX ; i++ ) {
 			cube.position.y = maxY*((j+0.5)/nCubesY-0.5);
 			cube.position.z = maxZ*((k+0.5)/nCubesZ-0.5);
 			
-			//cube.rotation.x = Math.PI/6;
-			//cube.rotation.y = Math.PI/6;
-
 			if ( !cubes[i] ) {
 				cubes.push([]);
 				cubes_orig.push([]);
@@ -143,14 +142,16 @@ for ( var i=0 ; i<nCubesX ; i++ ) {
 				cubes_orig[i].push([]);
 			}
 			
+			var hsl = material.color.getHSL();
+			
 			cubes[i][j].push(cube);
 			cubes_orig[i][j].push({
 				x: cube.position.x,
 				y: cube.position.y,
 				z: cube.position.z,
-				h: h,
-				s: s,
-				l: l
+				h: hsl.h,
+				s: hsl.s,
+				l: hsl.l
 			});
 			
 			scene.add(cubes[i][j][k]);
@@ -278,6 +279,8 @@ window.addEventListener('resize', function (){
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+var cidx = 0;
+
 var render = function () {
 	requestAnimationFrame(render);
 
@@ -303,8 +306,10 @@ var render = function () {
 	
 	var rRate = 2 * fps,
 		bgRate = 1 / 10,
-		dispFactorX = 4,
-		dispFactorY = 2;
+		cRate = 1 / 800,
+		cThresh = -28,
+		dispFactorX = 1,
+		dispFactorY = 0.5;
 		
 		
 	scene.background.setHSL(bgRate*ticks/fps, 1, 0);
@@ -349,30 +354,45 @@ var render = function () {
 			avgPowers.push(avgPow3);
 			avgAvgPowers += avgPow3/(nCubesX/2);
 		}
+		
+		if ( maxPow1 > cThresh )
+			cidx += cRate*Math.pow(Math.abs(maxPow1-cThresh), 1.75);
+		
+		var minFOV = 75,
+			maxFOV = 110,
+			minScale = 1,
+			maxScale = 1;
+			
+		camera.fov = maxFOV - avgPowers[0]*(maxFOV-minFOV);
+		camera.updateProjectionMatrix();
 	
 		for ( var i=0 ; i<nCubesX ; i++ ) {
 			var x_ = i/nCubesX,
 				_x = i/nCubesX - 0.5,
-				idx = 0, //maxFreq*x_,
+				xidx = 0, //maxFreq*x_,
 				disp = 0,
 				dispFactor = 2;
 			
 			if ( i < nCubesX/2 )
-				idx = nCubesX/2 - i - 1;
+				xidx = nCubesX/2 - i - 1;
 			else
-				idx = i - nCubesX/2;
+				xidx = i - nCubesX/2;
 			
-			disp = dispFactor * avgPowers[idx] * avgAvgPowers * 1/((idx/nCubesX)+1);
+			
+			
+			disp = dispFactor * avgPowers[xidx];
 			disp = isNaN(disp) ? 0 : disp;
-			//disp = avgPow2;
-			//disp *= dispFactor;
-			
-			//console.log(idx);
-			//console.log(frequencyData[idx]);
 			
 			for ( var j=0 ; j<nCubesY ; j++ ) {
 				var y_ = j/nCubesY,
-					_y = j/nCubesY - 0.5;
+					_y = j/nCubesY - 0.5,
+					yidx = 0,
+					dist = Math.sqrt(xidx*xidx+yidx*yidx);
+			
+				if ( j < nCubesY/2 )
+					yidx = nCubesY/2 - j - 1;
+				else
+					yidx = j - nCubesY/2;
 				
 				for ( var k=0 ; k<nCubesZ ; k++ ) {
 							var cube = cubes[i][j][k];
@@ -383,24 +403,35 @@ var render = function () {
 								z = cube.position.z;
 							
 							var z_ = k/nCubesZ,
-								_z = k/nCubesZ - 0.5;
+								_z = k/nCubesZ - 0.5,
+								zidx = 0;
+						
+							if ( k < nCubesZ/2 )
+								zidx = nCubesZ/2 - k - 1;
+							else
+								zidx = k - nCubesZ/2;
 								
 							
-							cube.position.y = cube_orig.y + disp;
+							cube.position.z = cube_orig.z + disp;
 							
-							//cube.position.x += dispFactorX * Math.sin(ticks/fps + 2*Math.PI*y/maxY)/1000;
-							//cube.position.y += dispFactorY * Math.sin(Math.sqrt(2)*ticks/fps + 2*2*Math.PI*x/maxX)/1000;
-							//cube.position.z += Math.sin(ticks/fps + 2*2*Math.PI*z/maxZ)/1000;
+							cube.position.x += disp*dispFactorX * Math.sin(ticks/fps*Math.abs(disp) + 2*Math.PI*yidx/maxY * zidx)/1000;
+							cube.position.y += disp*dispFactorY * Math.sin(Math.sqrt(2)*ticks/fps*Math.abs(disp) + 2*2*Math.PI*xidx/maxX * zidx)/1000;
+							cube.position.z += disp*Math.sin(ticks/fps*Math.abs(disp) + 2*2*Math.PI*zidx)/1000;
 							
-							//cube.material.color.setHSL(cube_orig.h, cube_orig.s, cube_orig.l)
+							cube.scale.x =
+							cube.scale.y =
+							cube.scale.z = minScale + dist*avgPowers[xidx]*(maxScale-minScale);
 							
-							//cube.rotation.x = Math.sin(ticks/fps * _y);
-							//cube.rotation.y = Math.sin(1.5*ticks/fps * _x + Math.PI/2);
+							cube.material.color.setHSL(cidx+xidx/nCubesX+yidx/nCubesY, cube_orig.s, cube_orig.l);	//((ticks/cRate)%fps)/fps
+							
+							cube.rotation.x = Math.sin(ticks/fps * _y);
+							cube.rotation.y = Math.sin(1.5*ticks/fps * _x + Math.PI/2);
+							
+							//cube.updateMatrix();
 				}
 			}
 		}
 	}
-	
 	renderer.render(scene, camera);
 };
 
