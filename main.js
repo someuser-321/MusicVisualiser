@@ -307,7 +307,7 @@ var render = function () {
 	var rRate = 2 * fps,
 		bgRate = 1 / 10,
 		cRate = 1 / 800,
-		cThresh = -28,
+		cThresh = -35,
 		dispFactorX = 1,
 		dispFactorY = 0.5;
 		
@@ -356,10 +356,10 @@ var render = function () {
 		}
 		
 		if ( maxPow1 > cThresh )
-			cidx += cRate*Math.pow(Math.abs(maxPow1-cThresh), 1.75);
+			cidx += cRate*Math.pow(Math.abs(maxPow1-cThresh), 1.65);
 		
-		var minFOV = 75,
-			maxFOV = 110,
+		var minFOV = 85,
+			maxFOV = 95,
 			minScale = 1,
 			maxScale = 1;
 			
