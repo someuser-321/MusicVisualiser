@@ -4,13 +4,15 @@
 		<style>
 			body { margin: 0; }
 			canvas { width: 100%; height: 100% }
+			input, span { position: fixed; z-index: 100; color: white; font-family: courier new; text-decoration: none; font-size: 14px;}
 		</style>
 	</head>
 	<body>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"></script>
-		<input type="file" id="audioFile" style="position: fixed; z-index: 100; background-color: white"></input>
+		<div id="inputs">
+			<input type="file" id="audioFile"></input>
+		</div>
 		<audio id="audioIn"></audio>
-		<a href="https://someuser-321.github.io/MusicVisualiser/testmusicdefinitelynotcopyrightinfringement.zip" style="position:fixed;background-color:white;top:20px;z-index:1000">Use this music!</a>
 		<script src="main.js"></script>
 	</body>
 </html>
