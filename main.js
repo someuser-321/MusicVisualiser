@@ -98,7 +98,7 @@ var config = {
 	minFOV: {
 		max: 90,
 		min: 60,
-		val: 60
+		val: 85
 	},
 	maxFOV: {
 		max: 120,
@@ -114,7 +114,16 @@ var config = {
 		max: 1,
 		min: 0,
 		val: 1
-	}
+	},
+    xFunc: {
+        val: "disp * dispFactorX * Math.sin(ticks/fps*Math.abs(disp) + 2*Math.PI*yidx/maxY * zidx)/1000"
+    },
+    yFunc: {
+        val: "disp * dispFactorY * Math.sin(Math.sqrt(2)*ticks/fps*Math.abs(disp) + 2*2*Math.PI*xidx/maxX * zidx)/1000"
+    },
+    zFunc: {
+        val: "disp * dispFactorZ * Math.sin(ticks/fps*Math.abs(disp) + 2*2*Math.PI*zidx)/1000"
+    }
 };
 
 var ctx,
@@ -256,28 +265,44 @@ var topOffset = 40;
 for ( var a in config ) {
 	if ( config.hasOwnProperty(a) )
 	{
-		var tmpControl = document.createElement("input");
-			tmpControl.type = "range";
-			tmpControl.min = config[a].min;
-			tmpControl.max = config[a].max;
-			tmpControl.step = (config[a].max-config[a].min) / 100;
-			tmpControl.setAttribute("value", config[a].val);
-			tmpControl.id = a;
-			tmpControl.style.left = "100px";
-			tmpControl.style.top = (25*inpidx) + topOffset + "px";
-		
-		var tmpLabel = document.createElement("span");
-			tmpLabel.innerText = a + ":";
-			tmpLabel.style.textAlign = "right";
-			tmpLabel.style.width = "90px";
-			tmpLabel.style.top = (25*inpidx) + 2 + topOffset + "px";
-		
-		document.getElementById("inputs").appendChild(tmpLabel);
-		document.getElementById("inputs").appendChild(tmpControl);
-		
+        if ( !a.endsWith("Func") ) 
+        {
+            var tmpControl = document.createElement("input");
+                tmpControl.type = "range";
+                tmpControl.min = config[a].min;
+                tmpControl.max = config[a].max;
+                tmpControl.step = (config[a].max-config[a].min) / 100;
+                tmpControl.setAttribute("value", config[a].val);
+                tmpControl.id = a;
+                tmpControl.style.top = (25*inpidx) + topOffset + "px";
+            
+            var tmpLabel = document.createElement("span");
+                tmpLabel.innerText = a + ":";
+                tmpLabel.style.textAlign = "right";
+                tmpLabel.style.top = (25*inpidx) + 2 + topOffset + "px";
+            
+            document.getElementById("inputs").appendChild(tmpLabel);
+            document.getElementById("inputs").appendChild(tmpControl);
+		} else {
+            var tmpLabel = document.createElement("span");
+                tmpLabel.innerText = a + ":";
+                tmpLabel.style.top = (25*inpidx) + 22 + topOffset + "px";
+                
+            topOffset += 40;
+            
+            var tmpControl = document.createElement("textarea");
+                tmpControl.id = a;
+                tmpControl.value = config[a].val;
+                tmpControl.style.top = (25*inpidx) + topOffset + "px";
+                tmpControl.style.height = "40px";
+                
+            document.getElementById("inputs").appendChild(tmpLabel);
+            document.getElementById("inputs").appendChild(tmpControl);
+        }
 		inpidx++;
 	}
 }
+
 
 document.getElementById("audioFile").addEventListener("change", function (){
 	var file = document.getElementById("audioFile").files[0];
@@ -306,9 +331,20 @@ document.getElementsByTagName("canvas")[0].addEventListener("click", function ()
 	{
 		document.getElementsByTagName("canvas")[0].requestPointerLock();
 		document.addEventListener("pointerlockchange", function (){
-			if ( document.pointerLockElement != document.getElementsByTagName("canvas")[0] )
+			if ( document.pointerLockElement != document.getElementsByTagName("canvas")[0] ) {
+                document.getElementById("inputs").style.display = "block";
 				camLock = false;
+            }
 		});
+        
+        for ( var a in config ) {
+            if ( !config[a].min ) {
+                var tmp = document.getElementById(a).value;
+                config[a].val = tmp;
+            }
+        }
+        
+        document.getElementById("inputs").style.display = "none";
 		camLock = true;
 	}
 });
@@ -341,8 +377,7 @@ document.addEventListener("keydown", function (e) {
 			rotVelocity = 0;
 			break;
 		case "k":
-			if ( !showAxes )
-			{
+			if ( !showAxes ) {
 				scene.add(lineX);
 				scene.add(lineY);
 				scene.add(lineZ);
@@ -405,9 +440,10 @@ var render = function () {
 	
 	
 	for ( var a in config ) {
-		if ( config.hasOwnProperty(a) )
+		if ( config[a].min )
 		{
-			config[a].val = parseFloat(document.getElementById(a).value);
+            var tmp = document.getElementById(a).value;
+            config[a].val = parseFloat(tmp);
 		}
 	}
 	
@@ -422,7 +458,10 @@ var render = function () {
 		minFOV = config.minFOV.val,
 		maxFOV = config.maxFOV.val,
 		minScale = config.minScale.val,
-		maxScale = config.maxScale.val;
+		maxScale = config.maxScale.val,
+        xFunc = config.xFunc.val,
+        yFunc = config.yFunc.val,
+        zFunc = config.zFunc.val;
 		
 		
 	scene.background.setHSL(bgRate*ticks/fps, 1, 0);
@@ -525,9 +564,13 @@ var render = function () {
 					
 					cube.position.z = cube_orig.z + disp;
 					
-					cube.position.x += disp * dispFactorX * Math.sin(ticks/fps*Math.abs(disp) + 2*Math.PI*yidx/maxY * zidx)/1000;
-					cube.position.y += disp * dispFactorY * Math.sin(Math.sqrt(2)*ticks/fps*Math.abs(disp) + 2*2*Math.PI*xidx/maxX * zidx)/1000;
-					cube.position.z += disp * dispFactorZ * Math.sin(ticks/fps*Math.abs(disp) + 2*2*Math.PI*zidx)/1000;
+                    var xDisp = eval(xFunc),
+                        yDisp = eval(yFunc),
+                        zDisp = eval(zFunc);
+                    
+					cube.position.x += xDisp;
+					cube.position.y += yDisp;
+					cube.position.z += xDisp;
 					
 					cube.scale.x =
 					cube.scale.y =

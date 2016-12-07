@@ -4,8 +4,13 @@
 		<style>
 			body { margin: 0; }
 			canvas { width: 100%; height: 100% }
-			input, span { position: fixed; z-index: 100; color: white; font-family: courier new; text-decoration: none; font-size: 14px;}
-		</style>
+			#inputs { width: 300px; position: fixed; z-index: 100; color: white; font-family: courier new; text-decoration: none; font-size: 14px; }
+			input { position: fixed; width: 200px; left: 100px; }
+            input[type=file] { left: 0px; }
+            textarea { position: fixed; width: 300px; }
+            span { position: fixed; width: 100px; }
+            /*input { width: 200px; position: relative; float: right; }*/
+            </style>
 	</head>
 	<body>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"></script>
