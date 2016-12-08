@@ -50,9 +50,6 @@ THREE.PointerLockControls = function (camera) {
 
 };
 
-
-var ticks = 0,
-	fps = 60;
 	
 var config = {
 	rRate : {
@@ -116,13 +113,13 @@ var config = {
 		val: 1
 	},
     xFunc: {
-        val: "disp * dispFactorX * Math.sin(ticks/fps*Math.abs(disp) + 2*Math.PI*yidx/maxY * zidx)/1000"
+        val: "disp * dispFactorX * Math.sin(delta*Math.abs(disp) + 2*Math.PI*yidx/maxY * zidx)/1000"
     },
     yFunc: {
-        val: "disp * dispFactorY * Math.sin(Math.sqrt(2)*ticks/fps*Math.abs(disp) + 2*2*Math.PI*xidx/maxX * zidx)/1000"
+        val: "disp * dispFactorY * Math.sin(Math.sqrt(2)*delta*Math.abs(disp) + 2*2*Math.PI*xidx/maxX * zidx)/1000"
     },
     zFunc: {
-        val: "disp * dispFactorZ * Math.sin(ticks/fps*Math.abs(disp) + 2*2*Math.PI*zidx)/1000"
+        val: "disp * dispFactorZ * Math.sin(delta*Math.abs(disp) + 2*2*Math.PI*zidx)/1000"
     }
 };
 
@@ -186,7 +183,7 @@ var light1 = new THREE.PointLight(0xffffff, 1, 100);
 light1.position.set(2, 2, -2);
 scene.add(light1);
 
-scene.add(new THREE.AmbientLight(0xaaaaaa));
+scene.add(new THREE.AmbientLight(0xffffff));
 
 
 var cubeGeometry = new THREE.BoxGeometry(cubeWidthX, cubeWidthY, cubeWidthZ);
@@ -344,6 +341,7 @@ document.getElementsByTagName("canvas")[0].addEventListener("click", function ()
 		document.addEventListener("pointerlockchange", function (){
 			if ( document.pointerLockElement != document.getElementsByTagName("canvas")[0] ) {
                 document.getElementById("inputs").style.display = "block";
+                document.getElementById("fps").style.display = "block";
 				camLock = false;
             }
 		});
@@ -356,6 +354,7 @@ document.getElementsByTagName("canvas")[0].addEventListener("click", function ()
         }
         
         document.getElementById("inputs").style.display = "none";
+        document.getElementById("fps").style.display = "none";
 		camLock = true;
 	}
 });
@@ -370,10 +369,10 @@ document.addEventListener("keydown", function (e) {
 			velocity += 0.1;
 			break;
 		case "q":
-			controls.getObject().rotateZ(1/fps);
+			controls.getObject().rotateZ(delta);
 		break;
 		case "e":
-			controls.getObject().rotateZ(-1/fps);
+			controls.getObject().rotateZ(-delta);
 		break;
 		case "a":
 			rotVelocity += 0.01;
@@ -424,13 +423,20 @@ window.addEventListener('resize', function (){
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-var cidx = 0;
+var cidx = 0,
+    ticks = 0,
+    fps = 60,
+    oldTime1 = 0,
+    oldTime2 = 0,
+    delta = 1/fps;
 
-var render = function () {
+var render = function (time)
+{
 	requestAnimationFrame(render);
-
-	ticks++;
+    ticks++;
 	
+    delta = (time - oldTime1)/1000;
+    
 	controls.getObject().position.z += velocity/fps;
 	//controls.getObject().translateZ(velocity/fps);
 	
@@ -448,15 +454,7 @@ var render = function () {
 	controls.getObject().rotateZ(rotVelocity/fps);
 	
 	light1.position.z = controls.getObject().position.z - 1;
-	
-	
-	for ( var a in config ) {
-		if ( config[a].min )
-		{
-            var tmp = document.getElementById(a).value;
-            config[a].val = parseFloat(tmp);
-		}
-	}
+
 	
 	var rRate = config.rRate.val,
 		bgRate = config.bgRate.val,
@@ -475,7 +473,7 @@ var render = function () {
         zFunc = config.zFunc.val;
 		
 		
-	scene.background.setHSL(bgRate*ticks/fps, 1, 0);
+	scene.background.setHSL(bgRate*delta, 1, 0);
 	
 	if ( analyser && !audio.ended )
 	{
@@ -589,8 +587,8 @@ var render = function () {
 					
 					cube.material.color.setHSL(cidx+xidx/nCubesX+yidx/nCubesY, cube_orig.s, cube_orig.l);	//((ticks/cRate)%fps)/fps
 					
-					cube.rotation.x = Math.sin(ticks/fps * _y);
-					cube.rotation.y = Math.sin(1.5*ticks/fps * _x + Math.PI/2);
+					cube.rotation.x = Math.sin(delta * _y);
+					cube.rotation.y = Math.sin(1.5*delta * _x + Math.PI/2);
 				}
 			}
 		}
@@ -600,6 +598,25 @@ var render = function () {
 	
 	}
 	
+    if ( ticks % 10 == 0 )
+    {
+        if ( !camLock ) {
+            for ( var a in config ) {
+                if ( config[a].min )
+                {
+                    var tmp = document.getElementById(a).value;
+                    config[a].val = parseFloat(tmp);
+                }
+            }
+        }
+        
+        fps = 10*1000/(time - oldTime2);
+        oldTime2 = time;
+        document.getElementById("fps").innerText = "FPS: " + Math.round(fps*10)/10;
+    }
+    
+    oldTime1 = time;
+    
 	renderer.render(scene, camera);
 };
 
