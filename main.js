@@ -68,7 +68,7 @@ var config = {
 	cRate: {
 		max: 1 / 100,
 		min: 0,
-		val: 1 / 800
+		val: 1 / 400
 	},
 	cThresh: {
 		max: -10,
@@ -304,6 +304,17 @@ for ( var a in config ) {
 }
 
 
+var tmpLabel = document.createElement("span");
+    tmpLabel.innerHTML = "<u>Click the visualiser to hide the controls!</u><br/>" +
+                         "W/S: Accelerate forwards/backwards<br/>" +
+                         "A/D: Spin left/right<br/>" +
+                         "X/C: Stop movement/rotation";
+    tmpLabel.style.width = "400px";
+    tmpLabel.style.top = (25*inpidx) + 37 + topOffset + "px";
+
+document.getElementById("inputs").appendChild(tmpLabel);
+
+    
 document.getElementById("audioFile").addEventListener("change", function (){
 	var file = document.getElementById("audioFile").files[0];
 	
